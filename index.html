@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPA Robotics - Registro Oficial</title>
+    <title>UPA Robotics - Pre-Registro</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -12,33 +12,29 @@
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: auto; background: #1e293b; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); border: 1px solid #334155; }
         
-        h1 { color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        h1 { color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; }
         
-        /* SECCIÓN DE REGISTRO */
-        .config-box { background: #334155; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 2px solid #38bdf8; }
-        input { background: #1e293b; border: 1px solid #38bdf8; color: white; padding: 12px; border-radius: 8px; width: 50%; font-size: 1.2em; text-align: center; outline: none; margin-bottom: 10px; }
-        
-        .btn-register { background: #4ade80; color: #064e3b; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em; transition: 0.3s; }
-        .btn-register:hover { background: #22c55e; transform: scale(1.05); }
-        .btn-register:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+        /* ESTADOS DEL SISTEMA */
+        .status-box { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; transition: 0.3s; }
+        .status-waiting { background: #334155; color: #94a3b8; border: 1px solid #475569; }
+        .status-ready { background: #1e3a8a; color: #38bdf8; border: 2px solid #38bdf8; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        /* VELOCÍMETRO */
-        .speed-display { font-size: 5.5em; color: #94a3b8; margin: 15px 0; font-family: 'Courier New', monospace; font-weight: bold; }
-        .new-data { color: #4ade80; animation: blink 1s infinite; } /* Parpadeo cuando hay dato nuevo sin registrar */
-        @keyframes blink { 50% { opacity: 0.5; } }
+        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 60%; font-size: 1.2em; text-align: center; outline: none; margin-bottom: 10px; }
+        input:focus { border-color: #38bdf8; }
+
+        .btn-ready { background: #38bdf8; color: #0f172a; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-ready:hover { background: #7dd3fc; }
+
+        .speed-display { font-size: 5.5em; color: #4ade80; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; }
         .unit { font-size: 0.3em; color: #94a3b8; }
 
-        /* TABLAS */
         .tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
         .table-section { background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid #334155; }
-        h2 { font-size: 1.1em; margin-bottom: 15px; text-transform: uppercase; }
-        
         table { width: 100%; border-collapse: separate; border-spacing: 0 5px; font-size: 0.85em; }
         th { background: #334155; color: #94a3b8; padding: 10px; }
         td { background: #1e293b; padding: 10px; border-top: 1px solid #334155; }
-        
-        .top-row-1 { border: 2px solid #fbbf24 !important; color: #fbbf24; font-weight: bold; }
-        .btn-reset { background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 8px; cursor: pointer; margin-top: 30px; font-size: 0.8em; }
+        .top-row-1 { border: 2px solid #fbbf24; color: #fbbf24; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -46,11 +42,11 @@
     <div class="container">
         <h1>🏎️ UPA ROBOTICS</h1>
         
-        <div class="config-box">
-            <p style="color:#38bdf8; margin:0 0 10px 0; font-weight: bold;">1. INGRESA NOMBRE Y 2. PRESIONA ENTER AL TERMINAR</p>
-            <input type="text" id="robot-input" placeholder="Nombre del Robot..." onkeydown="if(event.key==='Enter') registrarDato()">
+        <div id="status-area" class="status-box status-waiting">
+            <div id="status-text">SISTEMA EN ESPERA: INGRESA UN NOMBRE</div>
+            <input type="text" id="robot-input" placeholder="Nombre del Robot..." onkeydown="if(event.key==='Enter') armarSistema()">
             <br>
-            <button id="reg-btn" class="btn-register" onclick="registrarDato()" disabled>REGISTRAR TIEMPO</button>
+            <button class="btn-ready" onclick="armarSistema()">ARMAR SISTEMA</button>
         </div>
 
         <div class="speed-display" id="speed-val">0.0 <span class="unit">mm/s</span></div>
@@ -63,7 +59,6 @@
                     <tbody id="top-10-table"></tbody>
                 </table>
             </div>
-
             <div class="table-section">
                 <h2 style="color:#38bdf8;">🕒 HISTORIAL</h2>
                 <table>
@@ -72,8 +67,6 @@
                 </table>
             </div>
         </div>
-
-        <button class="btn-reset" onclick="clearAll()">Reiniciar Tablas</button>
     </div>
 
     <script>
@@ -88,69 +81,70 @@
         const velRef = database.ref('sector1/velocidad');
 
         let records = [];
-        let ultimoValorPendiente = 0;
+        let sistemaArmado = false;
+        let nombreActual = "";
+
+        // FUNCIÓN PARA "ARMAR" EL SISTEMA CON UN NOMBRE
+        function armarSistema() {
+            const input = document.getElementById('robot-input');
+            if (input.value.trim() === "") {
+                alert("Por favor ingresa un nombre para el robot");
+                return;
+            }
+            nombreActual = input.value.trim();
+            sistemaArmado = true;
+            
+            // UI en modo "Listo para detectar"
+            const statusArea = document.getElementById('status-area');
+            statusArea.className = "status-box status-ready";
+            document.getElementById('status-text').innerHTML = "SISTEMA LISTO: ESPERANDO A " + nombreActual.toUpperCase();
+            input.style.display = "none";
+            document.querySelector('.btn-ready').style.display = "none";
+        }
 
         // ESCUCHA DE FIREBASE
         velRef.on('value', (snapshot) => {
             const vel = snapshot.val();
-            if (vel !== null && vel > 0) {
-                ultimoValorPendiente = vel;
+            
+            // Solo registra si el sistema está armado y llega un valor > 0
+            if (sistemaArmado && vel !== null && vel > 0) {
+                const time = new Date().toLocaleTimeString();
                 
-                // Actualizar display y activar modo "espera"
-                const display = document.getElementById('speed-val');
-                display.innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
-                display.classList.add('new-data'); // Empieza a parpadear
-                
-                // Activar botón de registro
-                document.getElementById('reg-btn').disabled = false;
-                document.getElementById('reg-btn').innerHTML = "REGISTRAR: " + vel.toFixed(2) + " mm/s";
+                // Mostrar en pantalla grande
+                document.getElementById('speed-val').innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
+
+                // 1. Guardar en Historial
+                const historyRow = `<tr><td>${time}</td><td>${nombreActual}</td><td>${vel.toFixed(2)}</td></tr>`;
+                document.getElementById('history-table').insertAdjacentHTML('afterbegin', historyRow);
+
+                // 2. Guardar en Top 10
+                records.push({ name: nombreActual, speed: vel });
+                records.sort((a, b) => b.speed - a.speed);
+                const top10 = records.slice(0, 10);
+
+                const topBody = document.getElementById('top-10-table');
+                topBody.innerHTML = "";
+                top10.forEach((item, index) => {
+                    const isFirst = index === 0 ? 'class="top-row-1"' : '';
+                    topBody.insertAdjacentHTML('beforeend', `<tr ${isFirst}><td>#${index+1}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
+                });
+
+                // 3. DESARMAR SISTEMA AUTOMÁTICAMENTE
+                sistemaArmado = false;
+                resetFormulario();
             }
         });
 
-        // FUNCIÓN PARA REGISTRAR (AL DAR CLICK O ENTER)
-        function registrarDato() {
-            if (ultimoValorPendiente === 0) return;
-
-            const robotName = document.getElementById('robot-input').value.trim() || "Robot Anónimo";
-            const time = new Date().toLocaleTimeString();
-            const vel = ultimoValorPendiente;
-
-            // 1. Agregar a Historial
-            const historyRow = `<tr><td>${time}</td><td>${robotName}</td><td>${vel.toFixed(2)}</td></tr>`;
-            document.getElementById('history-table').insertAdjacentHTML('afterbegin', historyRow);
-
-            // 2. Agregar a Top 10
-            records.push({ name: robotName, speed: vel });
-            records.sort((a, b) => b.speed - a.speed);
-            const top10 = records.slice(0, 10);
-
-            const topBody = document.getElementById('top-10-table');
-            topBody.innerHTML = "";
-            top10.forEach((item, index) => {
-                const isFirst = index === 0 ? 'class="top-row-1"' : '';
-                topBody.insertAdjacentHTML('beforeend', `<tr ${isFirst}><td>#${index+1}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
-            });
-
-            // 3. Resetear estado de espera
-            document.getElementById('speed-val').classList.remove('new-data');
-            document.getElementById('reg-btn').disabled = true;
-            document.getElementById('reg-btn').innerHTML = "ESPERANDO SENSOR...";
+        function resetFormulario() {
+            const statusArea = document.getElementById('status-area');
+            statusArea.className = "status-box status-waiting";
+            document.getElementById('status-text').innerHTML = "REGISTRO EXITOSO. INGRESA SIGUIENTE COMPETIDOR:";
             
-            // Opcional: Limpiar el input para el siguiente robot
-            document.getElementById('robot-input').value = "";
-            document.getElementById('robot-input').focus();
-            
-            ultimoValorPendiente = 0;
-        }
-
-        function clearAll() {
-            if(confirm("¿Borrar todos los datos?")) {
-                records = [];
-                document.getElementById('top-10-table').innerHTML = "";
-                document.getElementById('history-table').innerHTML = "";
-                document.getElementById('speed-val').innerHTML = '0.0 <span class="unit">mm/s</span>';
-                ultimoValorPendiente = 0;
-            }
+            const input = document.getElementById('robot-input');
+            input.value = "";
+            input.style.display = "inline-block";
+            document.querySelector('.btn-ready').style.display = "inline-block";
+            input.focus();
         }
     </script>
 </body>
