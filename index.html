@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPA Robotics - Sincronización Total</title>
+    <title>UPA Robotics - Admin Seguro</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -11,9 +11,8 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: auto; background: #1e293b; padding: 20px; border-radius: 20px; border: 1px solid #334155; }
-        h1 { color: #38bdf8; text-transform: uppercase; cursor: pointer; font-size: 1.5rem; }
+        h1 { color: #38bdf8; text-transform: uppercase; font-size: 1.5rem; }
         
-        /* ESTADOS SINCRONIZADOS */
         .status-box { padding: 20px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; border: 1px solid #475569; }
         .status-waiting { background: #334155; color: #94a3b8; }
         .status-ready { background: #1e3a8a; color: #38bdf8; border: 2px solid #38bdf8; animation: pulse 2s infinite; }
@@ -22,8 +21,10 @@
         input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 80%; font-size: 1.1em; text-align: center; margin-bottom: 10px; }
         .btn-ready { background: #38bdf8; color: #0f172a; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 80%; }
         
-        /* BOTÓN CANCELAR NOMBRE (Solo Admin) */
-        .btn-cancel { background: #f59e0b; color: #451a03; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-size: 0.8em; font-weight: bold; display: none; }
+        /* BOTONES ADMIN OCULTOS */
+        .admin-only { display: none; } 
+        .btn-cancel { background: #f59e0b; color: #451a03; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        .btn-reset { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; }
 
         .speed-display { font-size: 4.5em; color: #4ade80; margin: 10px 0; font-family: 'Courier New', monospace; font-weight: bold; }
         .unit { font-size: 0.3em; color: #94a3b8; }
@@ -34,25 +35,22 @@
         th { background: #334155; color: #94a3b8; padding: 8px; }
         td { background: #1e293b; padding: 8px; border-top: 1px solid #334155; }
         .top-row-1 { border: 2px solid #fbbf24; color: #fbbf24; font-weight: bold; }
-
-        #admin-panel { margin-top: 30px; display: none; border-top: 2px dashed #ef4444; padding-top: 20px; }
-        .btn-reset { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
-<body>
+<body onload="verificarAcceso()">
 
     <div class="container">
-        <h1 onclick="activarAdmin()">🏎️ UPA ROBOTICS</h1>
+        <h1>🏎️ UPA ROBOTICS</h1>
         
         <div id="status-area" class="status-box status-waiting">
             <div id="input-view">
-                <p style="margin:0 0 10px 0;">NUEVO COMPETIDOR:</p>
-                <input type="text" id="robot-input" placeholder="Nombre del Robot..." onkeydown="if(event.key==='Enter') armarSistema()">
-                <button class="btn-ready" onclick="armarSistema()">REGISTRAR Y ESPERAR SENSOR</button>
+                <p id="label-nombre" style="margin:0 0 10px 0;">INGRESA NOMBRE DEL COMPETIDOR:</p>
+                <input type="password" id="robot-input" placeholder="Escribe aquí..." onkeydown="if(event.key==='Enter') procesarEntrada()">
+                <button class="btn-ready" onclick="procesarEntrada()">ARMAR SISTEMA</button>
             </div>
             <div id="ready-view" style="display:none;">
                 <p id="status-text">ESPERANDO DETECCIÓN...</p>
-                <button id="cancel-btn" class="btn-cancel" onclick="cancelarNombre()">✖ CANCELAR / BORRAR NOMBRE</button>
+                <button class="btn-cancel admin-only" onclick="cancelarNombre()">✖ CANCELAR REGISTRO</button>
             </div>
         </div>
 
@@ -75,8 +73,9 @@
             </div>
         </div>
 
-        <div id="admin-panel">
-            <p style="color:#ef4444; font-size: 0.8em; font-weight: bold;">PANEL DE CONTROL MAESTRO</p>
+        <div id="admin-panel" class="admin-only">
+            <hr style="border: 1px dashed #ef4444; margin-top: 30px;">
+            <p style="color:#ef4444; font-weight: bold;">MODO ADMINISTRADOR ACTIVO</p>
             <button class="btn-reset" onclick="borrarNube()">LIMPIAR TODA LA BASE DE DATOS</button>
         </div>
     </div>
@@ -91,110 +90,114 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let nombreSincronizado = "";
-        let sistemaArmadoSincronizado = false;
+        // --- SEGURIDAD ---
+        const MASTER_KEY = "upa2026"; // Esta es tu clave
         let esAdmin = false;
 
-        // 1. SINCRONIZACIÓN DEL ESTADO (Para que todos vean lo mismo)
+        function verificarAcceso() {
+            if (localStorage.getItem('admin_upa') === 'true') {
+                activarModoAdmin();
+            }
+        }
+
+        function activarModoAdmin() {
+            esAdmin = true;
+            localStorage.setItem('admin_upa', 'true');
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            const input = document.getElementById('robot-input');
+            input.type = "text"; // Para el admin el input ya es visible
+            document.getElementById('label-nombre').innerHTML = "MODO ADMIN: INGRESA NOMBRE";
+            console.log("Acceso administrador concedido.");
+        }
+
+        function procesarEntrada() {
+            const val = document.getElementById('robot-input').value.trim();
+            if (!val) return;
+
+            if (val === MASTER_KEY) {
+                activarModoAdmin();
+                document.getElementById('robot-input').value = "";
+                alert("¡Bienvenido, Administrador!");
+                return;
+            }
+
+            // Registrar nombre en la nube para sincronizar todos los dispositivos
+            db.ref('estado_actual').set({ armado: true, nombre: val });
+            document.getElementById('robot-input').value = "";
+        }
+
+        // --- SINCRONIZACIÓN ---
         db.ref('estado_actual').on('value', (snapshot) => {
             const estado = snapshot.val();
             const inputView = document.getElementById('input-view');
             const readyView = document.getElementById('ready-view');
             const statusArea = document.getElementById('status-area');
-            const cancelBtn = document.getElementById('cancel-btn');
 
             if (estado && estado.armado) {
-                sistemaArmadoSincronizado = true;
-                nombreSincronizado = estado.nombre;
-                
                 inputView.style.display = "none";
                 readyView.style.display = "block";
                 statusArea.className = "status-box status-ready";
-                document.getElementById('status-text').innerHTML = "SISTEMA LISTO: " + nombreSincronizado.toUpperCase();
-                
-                // El botón de cancelar solo se muestra si activaste el modo admin
-                cancelBtn.style.display = esAdmin ? "inline-block" : "none";
+                document.getElementById('status-text').innerHTML = "LISTO: ESPERANDO A " + estado.nombre.toUpperCase();
+                document.querySelector('.btn-cancel').style.display = esAdmin ? "inline-block" : "none";
             } else {
-                sistemaArmadoSincronizado = false;
                 inputView.style.display = "block";
                 readyView.style.display = "none";
                 statusArea.className = "status-box status-waiting";
             }
         });
 
-        // 2. SINCRONIZACIÓN DE TABLAS
         db.ref('historial').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                const lista = Object.values(data);
-                const historyBody = document.getElementById('history-table');
-                historyBody.innerHTML = "";
-                lista.reverse().forEach(item => {
-                    historyBody.insertAdjacentHTML('beforeend', `<tr><td>${item.time}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
-                });
-
-                const topBody = document.getElementById('top-10-table');
-                topBody.innerHTML = "";
-                const top10 = lista.sort((a, b) => b.speed - a.speed).slice(0, 10);
-                top10.forEach((item, i) => {
-                    const cls = i === 0 ? 'class="top-row-1"' : '';
-                    topBody.insertAdjacentHTML('beforeend', `<tr ${cls}><td>#${i+1}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
-                });
-            } else {
+            if (!data) {
                 document.getElementById('history-table').innerHTML = "";
                 document.getElementById('top-10-table').innerHTML = "";
+                return;
             }
+            const lista = Object.values(data);
+            
+            // Historial
+            const historyBody = document.getElementById('history-table');
+            historyBody.innerHTML = "";
+            lista.slice().reverse().forEach(item => {
+                historyBody.insertAdjacentHTML('beforeend', `<tr><td>${item.time}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
+            });
+
+            // Top 10
+            const topBody = document.getElementById('top-10-table');
+            topBody.innerHTML = "";
+            const top10 = lista.sort((a, b) => b.speed - a.speed).slice(0, 10);
+            top10.forEach((item, i) => {
+                const cls = i === 0 ? 'class="top-row-1"' : '';
+                topBody.insertAdjacentHTML('beforeend', `<tr ${cls}><td>#${i+1}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
+            });
         });
 
-        // 3. DETECCIÓN DEL SENSOR (ESP32)
+        // Lógica del sensor vinculada al estado armado
         db.ref('sector1/velocidad').on('value', (snapshot) => {
             const vel = snapshot.val();
-            if (sistemaArmadoSincronizado && vel > 0) {
-                const time = new Date().toLocaleTimeString();
-                document.getElementById('speed-val').innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
-
-                // Registrar en la nube
-                db.ref('historial').push({ name: nombreSincronizado, speed: vel, time: time });
-                
-                // Desarmar sistema globalmente
-                db.ref('estado_actual').set({ armado: false, nombre: "" });
-                // Resetear el valor del sensor para la próxima
-                db.ref('sector1/velocidad').set(0);
-            }
+            db.ref('estado_actual').once('value', (snap) => {
+                const estado = snap.val();
+                if (estado && estado.armado && vel > 0) {
+                    const time = new Date().toLocaleTimeString();
+                    document.getElementById('speed-val').innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
+                    
+                    db.ref('historial').push({ name: estado.nombre, speed: vel, time: time });
+                    db.ref('estado_actual').set({ armado: false, nombre: "" });
+                    db.ref('sector1/velocidad').set(0);
+                }
+            });
         });
 
-        function armarSistema() {
-            const nombre = document.getElementById('robot-input').value.trim();
-            if (!nombre) return alert("Ingresa un nombre");
-            // Actualiza la nube: ahora todos los dispositivos sabrán que "nombre" está en pista
-            db.ref('estado_actual').set({ armado: true, nombre: nombre });
-            document.getElementById('robot-input').value = "";
-        }
-
         function cancelarNombre() {
-            if (confirm("¿Borrar nombre actual y volver a espera?")) {
+            if (confirm("¿Cancelar el turno actual?")) {
                 db.ref('estado_actual').set({ armado: false, nombre: "" });
-            }
-        }
-
-        let adminClicks = 0;
-        function activarAdmin() {
-            adminClicks++;
-            if(adminClicks === 5) { 
-                esAdmin = true;
-                document.getElementById('admin-panel').style.display = "block";
-                // Mostrar botón de cancelar si el sistema está armado
-                if(sistemaArmadoSincronizado) document.getElementById('cancel-btn').style.display = "inline-block";
-                alert("MODO ADMIN: ACTIVADO");
             }
         }
 
         function borrarNube() {
-            if(confirm("ESTO BORRARÁ TODO EL HISTORIAL PARA TODOS. ¿Continuar?")) {
+            if (confirm("¡ATENCIÓN! Se borrará todo el historial global. ¿Continuar?")) {
                 db.ref('historial').remove();
                 db.ref('estado_actual').set({ armado: false, nombre: "" });
-                db.ref('sector1/velocidad').set(0);
-                alert("Base de datos limpia");
             }
         }
     </script>
