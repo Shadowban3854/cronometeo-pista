@@ -3,51 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPA Robotics - Telemetría en Vivo</title>
+    <title>UPA Robotics - TOP 10 Oficial</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #121212; color: #ffffff; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 5px solid #004a99; }
-        h1 { color: #004a99; margin-bottom: 5px; }
-        .speed-display { font-size: 5em; color: #00ff41; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; transition: all 0.3s ease; }
-        .unit { font-size: 0.3em; color: #aaa; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: auto; background: #1e293b; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); border: 1px solid #334155; }
         
-        /* Animación de parpadeo cuando llega un dato nuevo */
-        .flash { color: #ffffff; text-shadow: 0 0 20px #00ff41; }
+        h1 { color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .speed-display { font-size: 5.5em; color: #4ade80; margin: 10px 0; font-family: 'Courier New', monospace; font-weight: bold; }
+        .unit { font-size: 0.3em; color: #94a3b8; }
 
-        table { width: 100%; margin-top: 30px; border-collapse: collapse; background: #252525; border-radius: 10px; overflow: hidden; }
-        th { background: #004a99; color: white; padding: 12px; }
-        td { padding: 12px; border-bottom: 1px solid #333; font-size: 1.1em; }
+        /* Estilo para el input del nombre */
+        .config-box { background: #334155; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        input { background: #1e293b; border: 1px solid #38bdf8; color: white; padding: 10px; border-radius: 6px; width: 70%; font-size: 1.1em; text-align: center; }
         
-        .btn-reset { background: #d32f2f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px; font-weight: bold; }
+        .leaderboard-title { margin-top: 30px; color: #fbbf24; font-size: 1.5em; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        
+        table { width: 100%; margin-top: 15px; border-collapse: separate; border-spacing: 0 8px; }
+        th { background: #334155; color: #94a3b8; padding: 12px; font-size: 0.8em; text-transform: uppercase; }
+        td { background: #1e293b; padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; font-size: 1.1em; }
+        
+        /* El #1 resalta en dorado */
+        tr:first-child td { border: 2px solid #fbbf24; color: #fbbf24; font-weight: bold; }
+        
+        .rank { font-weight: bold; color: #38bdf8; width: 50px; }
+        .robot-name { color: #f8fafc; font-style: italic; }
+        
+        .btn-reset { background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 8px; cursor: pointer; margin-top: 25px; }
+        .btn-reset:hover { background: #ef4444; color: white; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>🏎️ UPA ROBOTICS</h1>
-        <p style="color: #888;">TELEMETRÍA EN TIEMPO REAL</p>
         
-        <div class="speed-display" id="speed-val">0.000 <span class="unit">m/s</span></div>
+        <div class="config-box">
+            <p style="margin-top:0; color:#38bdf8;">Próximo Competidor:</p>
+            <input type="text" id="robot-input" placeholder="Nombre del Robot (ej. Rayo-1)">
+        </div>
 
-        <button class="btn-reset" onclick="resetTable()">Limpiar Historial</button>
+        <div class="speed-display" id="speed-val">0.0 <span class="unit">mm/s</span></div>
 
+        <div class="leaderboard-title">🏆 TOP 10 MEJORES TIEMPOS</div>
         <table>
             <thead>
                 <tr>
-                    <th>Hora</th>
-                    <th>Velocidad (m/s)</th>
+                    <th>Pos</th>
+                    <th>Robot</th>
+                    <th>Velocidad (mm/s)</th>
                 </tr>
             </thead>
-            <tbody id="history-table"></tbody>
+            <tbody id="top-10-table">
+                </tbody>
         </table>
+
+        <button class="btn-reset" onclick="clearDashboard()">Reiniciar Competencia</button>
     </div>
 
     <script>
-        // Configuración de tu proyecto
         const firebaseConfig = {
             apiKey: "AIzaSyDF00ZBgFz0yu-uogdLgP7G4Xp94cgNg-g",
             databaseURL: "https://cronometro-pista-618ad-default-rtdb.firebaseio.com",
@@ -56,39 +73,56 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
-        // Referencia a la velocidad
         const velRef = database.ref('sector1/velocidad');
 
-        // Función que "escucha" permanentemente
+        let allTimes = [];
+
+        // Escucha en tiempo real
         velRef.on('value', (snapshot) => {
             const vel = snapshot.val();
+            const robotName = document.getElementById('robot-input').value || "Anónimo";
             
-            if (vel !== null) {
-                const display = document.getElementById('speed-val');
+            if (vel !== null && vel > 0) {
+                // Actualizar pantalla principal
+                document.getElementById('speed-val').innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
                 
-                // 1. Actualizar el número grande
-                display.innerHTML = vel.toFixed(3) + ' <span class="unit">m/s</span>';
+                // Guardar registro
+                const newRecord = {
+                    name: robotName,
+                    speed: vel,
+                    time: new Date().toLocaleTimeString()
+                };
                 
-                // 2. Efecto visual de actualización
-                display.classList.add('flash');
-                setTimeout(() => display.classList.remove('flash'), 500);
-                
-                // 3. Agregar a la tabla de historial
-                const now = new Date();
-                const timeString = now.toLocaleTimeString();
-                const newRow = `<tr><td>${timeString}</td><td>${vel.toFixed(3)}</td></tr>`;
-                
-                const tableBody = document.getElementById('history-table');
-                tableBody.insertAdjacentHTML('afterbegin', newRow);
+                allTimes.push(newRecord);
+                allTimes.sort((a, b) => b.speed - a.speed);
+                const top10 = allTimes.slice(0, 10);
+
+                renderTable(top10);
             }
-        }, (error) => {
-            console.error("Error de Firebase:", error);
         });
 
-        function resetTable() {
-            if(confirm("¿Deseas limpiar la tabla?")) {
-                document.getElementById('history-table').innerHTML = "";
+        function renderTable(data) {
+            const tableBody = document.getElementById('top-10-table');
+            tableBody.innerHTML = "";
+
+            data.forEach((record, index) => {
+                const row = `
+                    <tr>
+                        <td class="rank">#${index + 1}</td>
+                        <td class="robot-name">${record.name}</td>
+                        <td>${record.speed.toFixed(2)}</td>
+                    </tr>
+                `;
+                tableBody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function clearDashboard() {
+            if(confirm("¿Deseas reiniciar la competencia?")) {
+                allTimes = [];
+                document.getElementById('top-10-table').innerHTML = "";
+                document.getElementById('speed-val').innerHTML = '0.0 <span class="unit">mm/s</span>';
+                document.getElementById('robot-input').value = "";
             }
         }
     </script>
