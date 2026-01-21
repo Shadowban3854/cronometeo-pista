@@ -12,23 +12,24 @@
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #121212; color: #ffffff; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 5px solid #004a99; }
         h1 { color: #004a99; margin-bottom: 5px; }
-        .label { color: #888; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }
-        .speed-display { font-size: 5em; color: #00ff41; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; }
+        .speed-display { font-size: 5em; color: #00ff41; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; transition: all 0.3s ease; }
         .unit { font-size: 0.3em; color: #aaa; }
         
+        /* Animación de parpadeo cuando llega un dato nuevo */
+        .flash { color: #ffffff; text-shadow: 0 0 20px #00ff41; }
+
         table { width: 100%; margin-top: 30px; border-collapse: collapse; background: #252525; border-radius: 10px; overflow: hidden; }
-        th { background: #004a99; color: white; padding: 12px; font-size: 0.9em; }
+        th { background: #004a99; color: white; padding: 12px; }
         td { padding: 12px; border-bottom: 1px solid #333; font-size: 1.1em; }
         
         .btn-reset { background: #d32f2f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px; font-weight: bold; }
-        .btn-reset:hover { background: #b71c1c; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>🏎️ UPA ROBOTICS</h1>
-        <p class="label">Velocidad en Tiempo Real</p>
+        <p style="color: #888;">TELEMETRÍA EN TIEMPO REAL</p>
         
         <div class="speed-display" id="speed-val">0.000 <span class="unit">m/s</span></div>
 
@@ -37,37 +38,43 @@
         <table>
             <thead>
                 <tr>
-                    <th>Hora de Registro</th>
+                    <th>Hora</th>
                     <th>Velocidad (m/s)</th>
                 </tr>
             </thead>
-            <tbody id="history-table">
-                </tbody>
+            <tbody id="history-table"></tbody>
         </table>
     </div>
 
     <script>
-        // 2. Tu Configuración de Firebase
+        // Configuración de tu proyecto
         const firebaseConfig = {
             apiKey: "AIzaSyDF00ZBgFz0yu-uogdLgP7G4Xp94cgNg-g",
             databaseURL: "https://cronometro-pista-618ad-default-rtdb.firebaseio.com",
             projectId: "cronometro-pista-618ad"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // 3. Escuchar cambios en la base de datos
-        // Importante: La ruta '/sector1/velocidad' debe coincidir con el código del ESP32
-        database.ref('sector1/velocidad').on('value', (snapshot) => {
+        // Referencia a la velocidad
+        const velRef = database.ref('sector1/velocidad');
+
+        // Función que "escucha" permanentemente
+        velRef.on('value', (snapshot) => {
             const vel = snapshot.val();
             
             if (vel !== null) {
-                // Actualizar el número grande
-                document.getElementById('speed-val').innerHTML = vel.toFixed(3) + ' <span class="unit">m/s</span>';
+                const display = document.getElementById('speed-val');
                 
-                // Agregar al historial (arriba de la tabla)
+                // 1. Actualizar el número grande
+                display.innerHTML = vel.toFixed(3) + ' <span class="unit">m/s</span>';
+                
+                // 2. Efecto visual de actualización
+                display.classList.add('flash');
+                setTimeout(() => display.classList.remove('flash'), 500);
+                
+                // 3. Agregar a la tabla de historial
                 const now = new Date();
                 const timeString = now.toLocaleTimeString();
                 const newRow = `<tr><td>${timeString}</td><td>${vel.toFixed(3)}</td></tr>`;
@@ -75,15 +82,15 @@
                 const tableBody = document.getElementById('history-table');
                 tableBody.insertAdjacentHTML('afterbegin', newRow);
             }
+        }, (error) => {
+            console.error("Error de Firebase:", error);
         });
 
-        // Función para limpiar la tabla visualmente
         function resetTable() {
-            if(confirm("¿Deseas limpiar el historial de la pantalla?")) {
+            if(confirm("¿Deseas limpiar la tabla?")) {
                 document.getElementById('history-table').innerHTML = "";
             }
         }
     </script>
-
 </body>
 </html>
