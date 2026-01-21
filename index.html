@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPA Robotics - Telemetría</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        .card { background: #2d2d2d; padding: 20px; border-radius: 15px; max-width: 500px; margin: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-top: 5px solid #004a99; }
+        .speed { font-size: 4em; color: #00ff00; margin: 20px 0; font-family: 'Courier New', monospace; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #3d3d3d; border-radius: 10px; overflow: hidden; }
+        th { background: #004a99; padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #555; }
+        .label { color: #aaa; font-size: 0.9em; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🏎️ UPA ROBOTICS</h2>
+        <p class="label">Velocidad Sector 1</p>
+        <div class="speed" id="vel-real">0.000 <small style="font-size: 0.4em;">m/s</small></div>
+        
+        <h3>HISTORIAL</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tiempo</th>
+                    <th>Velocidad (m/s)</th>
+                </tr>
+            </thead>
+            <tbody id="historial"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // --- TU CONFIGURACIÓN DE FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDF00ZBgFz0yu-uogdLgP7G4Xp94cgNg-g",
+            databaseURL: "https://cronometro-pista-618ad-default-rtdb.firebaseio.com",
+            projectId: "cronometro-pista-618ad"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Esta función "escucha" la base de datos en tiempo real
+        db.ref('sector1/velocidad').on('value', (snapshot) => {
+            const vel = snapshot.val();
+            if (vel !== null) {
+                // Actualiza el número grande
+                document.getElementById('vel-real').innerHTML = vel.toFixed(3) + ' <small style="font-size: 0.4em;">m/s</small>';
+                
+                // Agrega la fila a la tabla de historial
+                const hora = new Date().toLocaleTimeString();
+                const fila = `<tr><td>${
