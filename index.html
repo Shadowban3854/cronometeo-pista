@@ -3,81 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPA Robotics - Admin Seguro</title>
+    <title>Estación Meteorológica UPA</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: auto; background: #1e293b; padding: 20px; border-radius: 20px; border: 1px solid #334155; }
-        h1 { color: #38bdf8; text-transform: uppercase; font-size: 1.5rem; }
+        h1 { color: #38bdf8; text-transform: uppercase; font-size: 1.8rem; margin-bottom: 20px; }
         
-        .status-box { padding: 20px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; border: 1px solid #475569; }
-        .status-waiting { background: #334155; color: #94a3b8; }
-        .status-ready { background: #1e3a8a; color: #38bdf8; border: 2px solid #38bdf8; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-
-        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 80%; font-size: 1.1em; text-align: center; margin-bottom: 10px; }
-        .btn-ready { background: #38bdf8; color: #0f172a; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 80%; }
-        
-        /* BOTONES ADMIN OCULTOS */
-        .admin-only { display: none; } 
-        .btn-cancel { background: #f59e0b; color: #451a03; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-weight: bold; }
-        .btn-reset { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-
-        .speed-display { font-size: 4.5em; color: #4ade80; margin: 10px 0; font-family: 'Courier New', monospace; font-weight: bold; }
+        .grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+        .card { background: #0f172a; border: 1px solid #334155; padding: 20px; border-radius: 12px; }
+        .card h3 { margin: 0; color: #94a3b8; font-size: 1em; text-transform: uppercase; }
+        .card .value { font-size: 3.5em; font-family: 'Courier New', monospace; font-weight: bold; margin: 10px 0; }
+        .val-temp { color: #f87171; }
+        .val-hum { color: #60a5fa; }
+        .val-wind { color: #4ade80; }
         .unit { font-size: 0.3em; color: #94a3b8; }
 
-        .tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .table-section { background: #0f172a; padding: 10px; border-radius: 12px; border: 1px solid #334155; }
-        table { width: 100%; border-collapse: separate; border-spacing: 0 5px; font-size: 0.8em; }
-        th { background: #334155; color: #94a3b8; padding: 8px; }
-        td { background: #1e293b; padding: 8px; border-top: 1px solid #334155; }
-        .top-row-1 { border: 2px solid #fbbf24; color: #fbbf24; font-weight: bold; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 5px; font-size: 0.9em; margin-top: 10px; }
+        th { background: #334155; color: #94a3b8; padding: 10px; }
+        td { background: #1e293b; padding: 10px; border-top: 1px solid #334155; }
+        .table-section { background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid #334155; text-align: left; }
+        
+        .header-section { display: flex; justify-content: space-between; align-items: center; }
+        .btn-reset { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
-<body onload="verificarAcceso()">
+<body>
 
     <div class="container">
-        <h1>🏎️ UPA ROBOTICS</h1>
+        <h1>🌤️ Estación Meteorológica UPA</h1>
         
-        <div id="status-area" class="status-box status-waiting">
-            <div id="input-view">
-                <p id="label-nombre" style="margin:0 0 10px 0;">INGRESA NOMBRE DEL COMPETIDOR:</p>
-                <input type="password" id="robot-input" placeholder="Escribe aquí..." onkeydown="if(event.key==='Enter') procesarEntrada()">
-                <button class="btn-ready" onclick="procesarEntrada()">ARMAR SISTEMA</button>
+        <!-- Indicadores en tiempo real -->
+        <div class="grid-cards">
+            <div class="card">
+                <h3>Temperatura</h3>
+                <div class="value val-temp" id="val-temp">-- <span class="unit">°C</span></div>
             </div>
-            <div id="ready-view" style="display:none;">
-                <p id="status-text">ESPERANDO DETECCIÓN...</p>
-                <button class="btn-cancel admin-only" onclick="cancelarNombre()">✖ CANCELAR REGISTRO</button>
+            <div class="card">
+                <h3>Humedad</h3>
+                <div class="value val-hum" id="val-hum">-- <span class="unit">%</span></div>
             </div>
-        </div>
-
-        <div class="speed-display" id="speed-val">0.0 <span class="unit">mm/s</span></div>
-
-        <div class="tables-grid">
-            <div class="table-section">
-                <h2 style="color:#fbbf24; font-size: 1em;">🏆 TOP 10 RÉCORDS</h2>
-                <table>
-                    <thead><tr><th>Pos</th><th>Robot</th><th>mm/s</th></tr></thead>
-                    <tbody id="top-10-table"></tbody>
-                </table>
-            </div>
-            <div class="table-section">
-                <h2 style="color:#38bdf8; font-size: 1em;">🕒 HISTORIAL GLOBAL</h2>
-                <table>
-                    <thead><tr><th>Hora</th><th>Robot</th><th>mm/s</th></tr></thead>
-                    <tbody id="history-table"></tbody>
-                </table>
+            <div class="card">
+                <h3>Viento</h3>
+                <div class="value val-wind" id="val-wind">-- <span class="unit">m/s</span></div>
             </div>
         </div>
 
-        <div id="admin-panel" class="admin-only">
-            <hr style="border: 1px dashed #ef4444; margin-top: 30px;">
-            <p style="color:#ef4444; font-weight: bold;">MODO ADMINISTRADOR ACTIVO</p>
-            <button class="btn-reset" onclick="borrarNube()">LIMPIAR TODA LA BASE DE DATOS</button>
+        <!-- Historial por minuto -->
+        <div class="table-section">
+            <div class="header-section">
+                <h2 style="color:#38bdf8; font-size: 1.2em; margin: 0;">🕒 Historial (Registrado cada minuto)</h2>
+                <button class="btn-reset" onclick="borrarHistorial()">Limpiar Historial</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Temperatura (°C)</th>
+                        <th>Humedad (%)</th>
+                        <th>Viento (m/s)</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table"></tbody>
+            </table>
         </div>
+
     </div>
 
     <script>
@@ -90,114 +83,44 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- SEGURIDAD ---
-        const MASTER_KEY = "upa2026"; // Esta es tu clave
-        let esAdmin = false;
-
-        function verificarAcceso() {
-            if (localStorage.getItem('admin_upa') === 'true') {
-                activarModoAdmin();
-            }
-        }
-
-        function activarModoAdmin() {
-            esAdmin = true;
-            localStorage.setItem('admin_upa', 'true');
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-            const input = document.getElementById('robot-input');
-            input.type = "text"; // Para el admin el input ya es visible
-            document.getElementById('label-nombre').innerHTML = "MODO ADMIN: INGRESA NOMBRE";
-            console.log("Acceso administrador concedido.");
-        }
-
-        function procesarEntrada() {
-            const val = document.getElementById('robot-input').value.trim();
-            if (!val) return;
-
-            if (val === MASTER_KEY) {
-                activarModoAdmin();
-                document.getElementById('robot-input').value = "";
-                alert("¡Bienvenido, Administrador!");
-                return;
-            }
-
-            // Registrar nombre en la nube para sincronizar todos los dispositivos
-            db.ref('estado_actual').set({ armado: true, nombre: val });
-            document.getElementById('robot-input').value = "";
-        }
-
-        // --- SINCRONIZACIÓN ---
-        db.ref('estado_actual').on('value', (snapshot) => {
-            const estado = snapshot.val();
-            const inputView = document.getElementById('input-view');
-            const readyView = document.getElementById('ready-view');
-            const statusArea = document.getElementById('status-area');
-
-            if (estado && estado.armado) {
-                inputView.style.display = "none";
-                readyView.style.display = "block";
-                statusArea.className = "status-box status-ready";
-                document.getElementById('status-text').innerHTML = "LISTO: ESPERANDO A " + estado.nombre.toUpperCase();
-                document.querySelector('.btn-cancel').style.display = esAdmin ? "inline-block" : "none";
-            } else {
-                inputView.style.display = "block";
-                readyView.style.display = "none";
-                statusArea.className = "status-box status-waiting";
+        // 1. Escuchar los datos en tiempo real
+        db.ref('estacion/actual').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('val-temp').innerHTML = (data.temp !== undefined ? data.temp.toFixed(1) : '--') + ' <span class="unit">°C</span>';
+                document.getElementById('val-hum').innerHTML = (data.hum !== undefined ? data.hum.toFixed(1) : '--') + ' <span class="unit">%</span>';
+                document.getElementById('val-wind').innerHTML = (data.viento !== undefined ? data.viento.toFixed(1) : '--') + ' <span class="unit">m/s</span>';
             }
         });
 
-        db.ref('historial').on('value', (snapshot) => {
+        // 2. Escuchar el historial para alimentar la tabla
+        db.ref('estacion/historial').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (!data) {
-                document.getElementById('history-table').innerHTML = "";
-                document.getElementById('top-10-table').innerHTML = "";
-                return;
-            }
-            const lista = Object.values(data);
-            
-            // Historial
             const historyBody = document.getElementById('history-table');
             historyBody.innerHTML = "";
-            lista.slice().reverse().forEach(item => {
-                historyBody.insertAdjacentHTML('beforeend', `<tr><td>${item.time}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
-            });
-
-            // Top 10
-            const topBody = document.getElementById('top-10-table');
-            topBody.innerHTML = "";
-            const top10 = lista.sort((a, b) => b.speed - a.speed).slice(0, 10);
-            top10.forEach((item, i) => {
-                const cls = i === 0 ? 'class="top-row-1"' : '';
-                topBody.insertAdjacentHTML('beforeend', `<tr ${cls}><td>#${i+1}</td><td>${item.name}</td><td>${item.speed.toFixed(2)}</td></tr>`);
-            });
-        });
-
-        // Lógica del sensor vinculada al estado armado
-        db.ref('sector1/velocidad').on('value', (snapshot) => {
-            const vel = snapshot.val();
-            db.ref('estado_actual').once('value', (snap) => {
-                const estado = snap.val();
-                if (estado && estado.armado && vel > 0) {
-                    const time = new Date().toLocaleTimeString();
-                    document.getElementById('speed-val').innerHTML = vel.toFixed(2) + ' <span class="unit">mm/s</span>';
-                    
-                    db.ref('historial').push({ name: estado.nombre, speed: vel, time: time });
-                    db.ref('estado_actual').set({ armado: false, nombre: "" });
-                    db.ref('sector1/velocidad').set(0);
-                }
-            });
-        });
-
-        function cancelarNombre() {
-            if (confirm("¿Cancelar el turno actual?")) {
-                db.ref('estado_actual').set({ armado: false, nombre: "" });
+            
+            if (data) {
+                const lista = Object.values(data);
+                // Invertimos la lista para que el más nuevo salga hasta arriba
+                lista.slice().reverse().forEach(item => {
+                    historyBody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td>${item.time}</td>
+                            <td>${item.temp.toFixed(1)}</td>
+                            <td>${item.hum.toFixed(1)}</td>
+                            <td>${item.viento.toFixed(1)}</td>
+                        </tr>
+                    `);
+                });
+            } else {
+                historyBody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Aún no hay registros en la base de datos. ESP32 subirá un registro en menos de 1 minuto.</td></tr>";
             }
-        }
+        });
 
-        function borrarNube() {
-            if (confirm("¡ATENCIÓN! Se borrará todo el historial global. ¿Continuar?")) {
-                db.ref('historial').remove();
-                db.ref('estado_actual').set({ armado: false, nombre: "" });
+        // 3. Función para limpiar el historial (Administrador o Usuario)
+        function borrarHistorial() {
+            if (confirm("¡ATENCIÓN! Se borrará todo el historial meteorológico en la nube. ¿Estás de acuerdo?")) {
+                db.ref('estacion/historial').remove();
             }
         }
     </script>
