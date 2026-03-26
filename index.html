@@ -29,6 +29,16 @@
         
         .header-section { display: flex; justify-content: space-between; align-items: center; }
         .btn-reset { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        /* --- Diseño Adaptable para Teléfonos --- */
+        @media (max-width: 768px) {
+            .grid-cards { grid-template-columns: 1fr; gap: 15px; } /* 1 sola columna en pantallas pequeñas */
+            .card .value { font-size: 2.8em; } /* Texto ligeramente más pequeño */
+            .header-section { flex-direction: column; gap: 15px; text-align: center; } /* Botón debajo del título */
+            .table-section { overflow-x: auto; } /* Permite deslizar la tabla si no cabe */
+            table { font-size: 0.85em; }
+            th, td { padding: 8px 5px; }
+        }
     </style>
 </head>
 <body>
